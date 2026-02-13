@@ -2,13 +2,6 @@
 
 Full-stack pastebin/file-share app built for the take-home assignment.
 
-## What changed per your request
-- No Firebase usage.
-- File storage uses local filesystem (`backend/uploads/`), i.e. system storage.
-- Database uses MongoDB at `localhost:27017` by default.
-- Additional (bonus) features implemented:
-  - Password-protected links
-  - One-time-view links
 
 ## Stack
 - Frontend: React + Vite + Tailwind CSS
