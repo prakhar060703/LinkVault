@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import jwt from "jsonwebtoken";
 
 const KEY_LENGTH = 64;
 
@@ -15,3 +16,8 @@ export const verifyPassword = (password, salt, expectedHash) => {
 };
 
 export const generateToken = () => crypto.randomBytes(16).toString("hex");
+
+export const signAuthToken = ({ userId, role }, jwtSecret) =>
+  jwt.sign({ sub: userId, role }, jwtSecret, { expiresIn: "7d" });
+
+export const verifyAuthToken = (token, jwtSecret) => jwt.verify(token, jwtSecret);

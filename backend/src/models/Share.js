@@ -14,12 +14,25 @@ const fileSchema = new mongoose.Schema(
 const shareSchema = new mongoose.Schema(
   {
     token: { type: String, required: true, unique: true, index: true },
+    owner: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
     type: { type: String, enum: ["text", "file"], required: true },
     text: { type: String, default: null },
     file: { type: fileSchema, default: null },
     expiresAt: { type: Date, required: true, index: true },
     oneTimeView: { type: Boolean, default: false },
+    maxViews: { type: Number, default: null },
     viewCount: { type: Number, default: 0 },
+    downloadCount: { type: Number, default: 0 },
+    reports: {
+      type: [
+        {
+          reportedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+          reason: { type: String, default: "" },
+          createdAt: { type: Date, default: Date.now }
+        }
+      ],
+      default: []
+    },
     passwordHash: { type: String, default: null },
     passwordSalt: { type: String, default: null }
   },

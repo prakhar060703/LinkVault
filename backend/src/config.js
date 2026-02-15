@@ -11,7 +11,10 @@ export const config = {
   port: toInt(process.env.PORT, 4000),
   mongoUri: process.env.MONGODB_URI || "mongodb://localhost:27017/linkvault",
   baseUrl: process.env.BASE_URL || "http://localhost:4000",
+  jwtSecret: process.env.JWT_SECRET || "change-me-in-env",
   defaultExpiryMinutes: toInt(process.env.DEFAULT_EXPIRY_MINUTES, 30),
   maxFileSizeBytes: toInt(process.env.MAX_FILE_SIZE_MB, 20) * 1024 * 1024,
-  uploadDir: process.env.UPLOAD_DIR || "uploads"
+  uploadDir: process.env.UPLOAD_DIR || "uploads",
+  adminEmail: (process.env.ADMIN_EMAIL || "admin@linkvault.local").toLowerCase(),
+  adminPassword: process.env.ADMIN_PASSWORD || "Admin@1234"
 };
