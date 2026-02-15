@@ -175,7 +175,10 @@ router.post("/", requireAuth, upload.single("file"), async (req, res, next) => {
 
 router.get("/mine", requireAuth, async (req, res, next) => {
   try {
-    const shares = await Share.find({ owner: req.user._id }).sort({ createdAt: -1 });
+    const shares = await Share.find({
+      owner: req.user._id,
+      expiresAt: { $gt: new Date() }
+    }).sort({ createdAt: -1 });
     return res.status(200).json({ items: shares.map(toMineResponse) });
   } catch (error) {
     return next(error);

@@ -12,6 +12,7 @@ import adminRouter from "./routes/admin.js";
 import { errorHandler, notFoundHandler } from "./middleware.js";
 import { User } from "./models/User.js";
 import { hashPassword } from "./utils/security.js";
+import { startExpiredShareCleanupJob } from "./utils/expiryCleanup.js";
 
 const app = express();
 
@@ -57,6 +58,7 @@ const ensureAdminUser = async () => {
 const start = async () => {
   await mongoose.connect(config.mongoUri);
   await ensureAdminUser();
+  startExpiredShareCleanupJob();
   app.listen(config.port, () => {
     console.log(`Backend listening at http://localhost:${config.port}`);
   });

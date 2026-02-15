@@ -45,7 +45,7 @@ router.get("/users", async (_req, res, next) => {
     const userIds = users.map((u) => u._id);
 
     const shareStats = await Share.aggregate([
-      { $match: { owner: { $in: userIds } } },
+      { $match: { owner: { $in: userIds }, expiresAt: { $gt: new Date() } } },
       {
         $group: {
           _id: "$owner",
@@ -78,7 +78,12 @@ router.get("/users", async (_req, res, next) => {
 
 router.get("/users/:userId/shares", async (req, res, next) => {
   try {
-    const shares = await Share.find({ owner: req.params.userId }).populate("owner", "name email role").sort({ createdAt: -1 });
+    const shares = await Share.find({
+      owner: req.params.userId,
+      expiresAt: { $gt: new Date() }
+    })
+      .populate("owner", "name email role")
+      .sort({ createdAt: -1 });
     return res.status(200).json({
       items: shares.map(toShareItem)
     });
@@ -90,7 +95,7 @@ router.get("/users/:userId/shares", async (req, res, next) => {
 router.get("/shares", async (req, res, next) => {
   try {
     const ownerRole = String(req.query.ownerRole || "all");
-    const shares = await Share.find({})
+    const shares = await Share.find({ expiresAt: { $gt: new Date() } })
       .populate("owner", "name email role")
       .sort({ createdAt: -1 });
 
@@ -107,7 +112,10 @@ router.get("/shares", async (req, res, next) => {
 
 router.get("/reported", async (_req, res, next) => {
   try {
-    const shares = await Share.find({ "reports.0": { $exists: true } })
+    const shares = await Share.find({
+      "reports.0": { $exists: true },
+      expiresAt: { $gt: new Date() }
+    })
       .populate("owner", "name email role")
       .sort({});
 

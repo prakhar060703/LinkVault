@@ -1,13 +1,16 @@
-# LinkVault
+﻿# LinkVault Design Document
 
-Full-stack secure text/file sharing app with auth, user activity, admin moderation, and report workflow.
+## Overview
+LinkVault is a full-stack secure sharing system for text and files with authenticated upload, token-based retrieval, moderation, and admin visibility.
 
-
-## Stack
+## Tech Stack
 - Frontend: React + Vite + Tailwind CSS
-- Backend: Node.js + Express + Multer
-- Database: MongoDB + Mongoose
-- Auth: JWT
+- Backend: Node.js + Express
+- Database: MongoDB with Mongoose
+- File Upload: Multer (disk storage)
+- Auth: JWT bearer tokens
+- Security/Middleware: Helmet, CORS, Morgan
+
 
 ## Project structure
 - `frontend/` React app (create/retrieve link UI)
@@ -55,96 +58,230 @@ Frontend runs on `http://localhost:5173`
 Mongo URI used by backend:
 `mongodb://localhost:27017/linkvault`
 
-## Backend environment
-Set these values in `backend/.env`:
+## Core Features and Implementation
 
-```env
-PORT=4000
-MONGODB_URI=mongodb://localhost:27017/linkvault
-BASE_URL=http://localhost:4000
-JWT_SECRET=change-this-secret
-ADMIN_EMAIL=admin@linkvault.local
-ADMIN_PASSWORD=Admin@1234
-DEFAULT_EXPIRY_MINUTES=30
-MAX_FILE_SIZE_MB=20
-UPLOAD_DIR=uploads
-```
+### 1. User Registration and Login
+- Feature:
+  - Users can register and login.
+  - Logged-in users receive a JWT.
+- Backend implementation:
+  - `POST /api/auth/register` creates user after validation.
+  - `POST /api/auth/login` validates credentials and returns JWT.
+  - Passwords are hashed with `crypto.scrypt` and per-user salt.
+- Files:
+  - `backend/src/routes/auth.js`
+  - `backend/src/utils/security.js`
+  - `backend/src/models/User.js`
 
-## API overview
-Base URL: `http://localhost:4000`
+### 2. JWT Authentication and Role Access
+- Feature:
+  - Protected APIs require bearer token.
+  - Admin-only APIs are role-restricted.
+- Backend implementation:
+  - `requireAuth` middleware extracts and verifies bearer token.
+  - `requireAdmin` checks `user.role === "admin"`.
+- Files:
+  - `backend/src/auth.js`
+  - `backend/src/routes/admin.js`
 
-### Health
-`GET /health`
+### 3. Create Secure Share (Text or File)
+- Feature:
+  - Authenticated users can create either:
+    - text share, or
+    - file share.
+  - Exactly one content type is allowed.
+- Backend implementation:
+  - `POST /api/shares` with `upload.single("file")`.
+  - Validates `text XOR file`, expiry, maxViews, password length.
+  - Generates random token using `crypto.randomBytes`.
+  - Stores share metadata in MongoDB.
+- Files:
+  - `backend/src/routes/shares.js`
+  - `backend/src/models/Share.js`
+  - `backend/src/utils/security.js`
 
-### Create share (text or file)
-`POST /api/shares`
-- `multipart/form-data`
-- auth required: `Authorization: Bearer <token>`
-- fields:
-  - `text` or `file` (exactly one required)
-  - `expiresAt` (optional ISO datetime, default +30 mins)
-  - `password` (optional)
-  - `oneTimeView` (`true`/`false`, optional)
-  - `maxViews` (optional positive integer)
+### 4. File Upload and Storage
+- Feature:
+  - Uploaded file is stored on local disk.
+- Backend implementation:
+  - Multer disk storage writes to `backend/uploads`.
+  - Filename is timestamp + random token + original extension.
+  - DB stores original name, mime type, size, and path.
+- Files:
+  - `backend/src/routes/shares.js`
+  - `backend/src/config.js`
 
-### Register / Login
-- `POST /api/auth/register` with `{ name, email, password }`
-- `POST /api/auth/login` with `{ email, password }`
-- `GET /api/auth/me` (auth required)
+### 5. Link Expiry
+- Feature:
+  - Each share has `expiresAt`.
+  - Default expiry is set when not provided.
+- Backend implementation:
+  - Expiry parsed/validated during share creation.
+  - Access routes reject expired links.
+  - MongoDB TTL index auto-removes expired records.
+- Files:
+  - `backend/src/routes/shares.js`
+  - `backend/src/models/Share.js`
 
-### User history
-- `GET /api/shares/mine` (auth required)
+### 6. One-Time and Max-Access Limits
+- Feature:
+  - Optional one-time view and max views/downloads limit.
+- Backend implementation:
+  - Access count computed as `viewCount + downloadCount`.
+  - Routes deny access when one-time already used or max reached.
+- Files:
+  - `backend/src/routes/shares.js`
 
-### Delete own share (admin can delete any)
-- `DELETE /api/shares/id/:shareId` (auth required)
+### 7. Password-Protected Links
+- Feature:
+  - Optional password on share.
+- Backend implementation:
+  - Password hash/salt stored in share record.
+  - `x-access-password` checked on retrieve/download routes.
+  - 401 response with `passwordRequired: true` when missing/invalid.
+- Files:
+  - `backend/src/routes/shares.js`
+  - `backend/src/utils/security.js`
 
-### Report a link as vulgar
-- `POST /api/shares/:token/report` (auth required)
-- body: `{ reason?: string }`
+### 8. Retrieve Content by Token
+- Feature:
+  - Receiver opens link token and gets content.
+- Backend implementation:
+  - `GET /api/shares/:token`:
+    - For text: returns text payload and increments `viewCount`.
+    - For file: returns metadata + download URL.
+- Files:
+  - `backend/src/routes/shares.js`
 
-### Admin APIs
-- `GET /api/admin/users` (admin only)
-- `GET /api/admin/users/:userId/shares` (admin only)
+### 9. File Download
+- Feature:
+  - File shares can be downloaded through secure endpoint.
+- Backend implementation:
+  - `GET /api/shares/:token/download` validates same rules.
+  - Increments `downloadCount`, then streams via `res.download`.
+- Files:
+  - `backend/src/routes/shares.js`
 
-### Retrieve metadata/content by token
-`GET /api/shares/:token`
-- optional header: `x-access-password`
-- For text: returns text body in JSON
-- For file: returns file metadata + download URL
+### 10. User Dashboard and History
+- Feature:
+  - User can see own shares and delete own shares.
+  - User dashboard shows all posts and filtered reported posts.
+- Backend implementation:
+  - `GET /api/shares/mine` returns active shares for logged-in owner.
+  - `DELETE /api/shares/id/:shareId` allows owner delete.
+- Frontend implementation:
+  - Dashboard cards, post list, detail panel, delete action.
+- Files:
+  - `backend/src/routes/shares.js`
+  - `frontend/src/App.jsx`
 
-### Download file
-`GET /api/shares/:token/download`
-- optional header: `x-access-password`
+### 11. Reporting Workflow (Moderation)
+- Feature:
+  - Logged-in users can report a post token with optional reason.
+  - Duplicate reports by same user are blocked.
+- Backend implementation:
+  - `POST /api/shares/:token/report` stores `{ reportedBy, reason, createdAt }`.
+- Frontend implementation:
+  - Report page takes token + reason and submits report.
+- Files:
+  - `backend/src/routes/shares.js`
+  - `backend/src/models/Share.js`
+  - `frontend/src/App.jsx`
 
-## Design decisions
-- Secret, hard-to-guess token (`crypto.randomBytes`) is used as the only access key.
-- Users must authenticate before creating links.
-- Owner is stored for each link to support per-user history and deletion.
-- Admin account exists as both a regular user and moderator (user listing + content control).
-- Reported content is attached to a link for moderation visibility.
-- TTL index on `expiresAt` auto-deletes records in MongoDB.
-- Files are stored on disk, and record metadata/path is stored in MongoDB.
-- Passwords are hashed with Node `scrypt` + random salt.
-- Login sessions use JWT bearer tokens.
+### 12. Admin Dashboard
+- Feature:
+  - Admin can monitor users, admin posts, access totals, reported posts.
+  - Admin can view user-specific posts and delete any post.
+- Backend implementation:
+  - `GET /api/admin/users`
+  - `GET /api/admin/users/:userId/shares`
+  - `GET /api/admin/shares`
+  - `GET /api/admin/reported`
+- Frontend implementation:
+  - Admin tiles and sections for posts/users/access.
+  - Reported posts route and moderation actions.
+- Files:
+  - `backend/src/routes/admin.js`
+  - `frontend/src/App.jsx`
 
-## Assumptions and limitations
-- Single instance deployment with local disk storage.
-- Expired records are eventually removed by MongoDB TTL monitor (not immediate to the second).
-- Uploaded files are deleted from disk on explicit delete API.
-- Uploaded files are not automatically deleted from disk by TTL alone (record is removed by Mongo TTL). A cleanup worker can be added.
-- One-time-view count increments on successful retrieval/download route hit.
+### 13. Access Tracking
+- Feature:
+  - Tracks how many times content is accessed.
+- Implementation:
+  - Text open increments `viewCount`.
+  - File download increments `downloadCount`.
+  - Admin aggregates access totals per owner from these counters.
+- Files:
+  - `backend/src/routes/shares.js`
+  - `backend/src/routes/admin.js`
 
-## High-level data flow
-```mermaid
-flowchart LR
-U[User Uploads text/file] --> F[Frontend React App]
-F --> B[Express API /api/shares]
-B --> D[(MongoDB: metadata + expiry + security flags)]
-B --> S[(Local FS: backend/uploads)]
+### 14. Background Cleanup for Expired Content
+- Feature:
+  - Removes expired records and stale uploaded files.
+- Backend implementation:
+  - Background job runs every minute.
+  - Finds expired shares, deletes corresponding files, then DB docs.
+  - Also run once at startup.
+- Files:
+  - `backend/src/utils/expiryCleanup.js`
+  - `backend/src/index.js`
 
-R[Recipient opens link] --> F2[Frontend /share/:token]
-F2 --> B2[GET /api/shares/:token]
-B2 --> D
-B2 --> S
-B2 --> R2[Text view or file download]
-```
+### 15. Security Hardening Basics
+- Feature:
+  - Secure defaults around headers, auth, and validation.
+- Implementation:
+  - `helmet()` for HTTP headers.
+  - Input validation on auth/share/report routes.
+  - Token format checks and centralized error handling.
+- Files:
+  - `backend/src/index.js`
+  - `backend/src/middleware.js`
+  - `backend/src/routes/*.js`
+
+## Data Model Summary
+
+### User
+- Fields:
+  - `name`, `email`, `passwordHash`, `passwordSalt`, `role`, timestamps
+- File:
+  - `backend/src/models/User.js`
+
+### Share
+- Fields:
+  - `token`, `owner`, `type`, `text`, `file`, `expiresAt`
+  - `oneTimeView`, `maxViews`
+  - `viewCount`, `downloadCount`
+  - `reports[]`, `passwordHash`, `passwordSalt`, timestamps
+- TTL index:
+  - `expiresAt` with `expireAfterSeconds: 0`
+- File:
+  - `backend/src/models/Share.js`
+
+## API Surface Summary
+- Auth:
+  - `POST /api/auth/register`
+  - `POST /api/auth/login`
+  - `GET /api/auth/me`
+- Shares:
+  - `POST /api/shares`
+  - `GET /api/shares/mine`
+  - `DELETE /api/shares/id/:shareId`
+  - `POST /api/shares/:token/report`
+  - `GET /api/shares/:token`
+  - `GET /api/shares/:token/download`
+- Admin:
+  - `GET /api/admin/users`
+  - `GET /api/admin/users/:userId/shares`
+  - `GET /api/admin/shares`
+  - `GET /api/admin/reported`
+
+## Known Limitations
+- File storage is local disk (single-instance oriented).
+- Access tracking is count-based, not identity-based for recipients.
+- No distributed lock for cleanup worker in multi-instance deployments.
+
+## Suggested Next Improvements
+- Add tests for auth, share limits, report workflow, and admin APIs.
+- Add rate limiting and audit logs for sensitive routes.
+- Move file storage to object storage for production scale.
+- Add recipient-level access events if identity tracking is required.

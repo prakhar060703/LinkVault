@@ -3,19 +3,240 @@
 @tailwind utilities;
 
 :root {
-  font-family: "Segoe UI", "Helvetica Neue", sans-serif;
+  font-family: "Poppins", "Segoe UI", "Helvetica Neue", sans-serif;
   color: #0f172a;
-  background: #f3f4f6;
+  background: #0c140f;
 }
 
 body {
   margin: 0;
   min-height: 100vh;
-  background: #f3f4f6;
+  background:
+    linear-gradient(145deg, rgba(7, 18, 14, 0.82), rgba(23, 18, 8, 0.84)),
+    url("./assets/wave-bg.svg");
+  background-size: cover, cover;
+  background-attachment: fixed;
   color: #0f172a;
   line-height: 1.5;
 }
 
 * {
   box-sizing: border-box;
+}
+
+.vault-page {
+  position: relative;
+  overflow: hidden;
+}
+
+.vault-page::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(to bottom, rgba(11, 23, 17, 0.2), rgba(23, 18, 8, 0.5));
+}
+
+.vault-page::after {
+  content: "";
+  position: absolute;
+  left: -10%;
+  right: -10%;
+  bottom: -80px;
+  height: 220px;
+  pointer-events: none;
+  background:
+    radial-gradient(120% 80% at 30% 100%, rgba(16, 185, 129, 0.22), transparent 60%),
+    radial-gradient(120% 80% at 70% 100%, rgba(245, 158, 11, 0.18), transparent 62%);
+  filter: blur(10px);
+  animation: waveDrift 14s ease-in-out infinite;
+}
+
+.vault-orb {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(64px);
+  opacity: 0.25;
+  animation: floatShift 12s ease-in-out infinite;
+}
+
+.orb-a {
+  width: 320px;
+  height: 320px;
+  background: #10b981;
+  top: -120px;
+  left: -80px;
+}
+
+.orb-b {
+  width: 280px;
+  height: 280px;
+  background: #14b8a6;
+  top: 20px;
+  right: -100px;
+  animation-delay: 1.8s;
+}
+
+.orb-c {
+  width: 220px;
+  height: 220px;
+  background: #34d399;
+  bottom: -110px;
+  left: 32%;
+  animation-delay: 3s;
+}
+
+.card-shell {
+  position: relative;
+  backdrop-filter: blur(10px);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(248, 250, 252, 0.9));
+  animation: cardRise 420ms ease-out;
+  overflow: hidden;
+}
+
+.card-shell::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(120deg, transparent 0%, rgba(16, 185, 129, 0.09) 45%, transparent 75%);
+}
+
+.vault-hero-word {
+  position: absolute;
+  inset: 0 auto auto 0;
+  pointer-events: none;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.12);
+  text-transform: uppercase;
+  white-space: nowrap;
+  transform: translateY(-16px);
+}
+
+.hero-glass {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(120deg, rgba(15, 23, 42, 0.68), rgba(5, 120, 88, 0.42));
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  backdrop-filter: blur(10px);
+}
+
+.wave-ribbon {
+  position: absolute;
+  left: -12%;
+  right: -12%;
+  height: 160px;
+  border-radius: 9999px;
+  filter: blur(8px);
+  pointer-events: none;
+}
+
+.wave-ribbon.a {
+  bottom: -98px;
+  background: radial-gradient(70% 80% at 50% 20%, rgba(16, 185, 129, 0.35), transparent 70%);
+  animation: waveSlideA 16s ease-in-out infinite;
+}
+
+.wave-ribbon.b {
+  bottom: -110px;
+  background: radial-gradient(70% 80% at 50% 20%, rgba(52, 211, 153, 0.28), transparent 72%);
+  animation: waveSlideB 18s ease-in-out infinite;
+}
+
+.btn-glow {
+  transition: transform 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
+}
+
+.btn-glow:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.18);
+}
+
+.layout-spacious {
+  gap: 1.25rem;
+}
+
+@keyframes floatShift {
+  0%, 100% { transform: translateY(0px) translateX(0px); }
+  50% { transform: translateY(14px) translateX(-8px); }
+}
+
+@keyframes cardRise {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes waveDrift {
+  0%, 100% { transform: translateX(0); opacity: 0.7; }
+  50% { transform: translateX(32px); opacity: 1; }
+}
+
+@keyframes waveSlideA {
+  0%, 100% { transform: translateX(0px); opacity: 0.8; }
+  50% { transform: translateX(36px); opacity: 1; }
+}
+
+@keyframes waveSlideB {
+  0%, 100% { transform: translateX(0px); opacity: 0.65; }
+  50% { transform: translateX(-42px); opacity: 0.95; }
+}
+
+.vault-brand-title {
+  background-size: 200% 200%;
+  animation: brandGlow 6s ease-in-out infinite, brandFloat 5s ease-in-out infinite;
+  filter: drop-shadow(0 8px 20px rgba(16, 185, 129, 0.22));
+}
+
+.auth-hero-image {
+  transform: scale(1.01);
+  animation: authImageFloat 16s ease-in-out infinite;
+}
+
+.auth-form-shell {
+  position: relative;
+  border: 1px solid rgba(148, 163, 184, 0.26);
+  background: linear-gradient(160deg, rgba(15, 23, 42, 0.78), rgba(17, 24, 39, 0.9));
+  border-radius: 1.5rem;
+  padding: 1.6rem;
+  box-shadow:
+    0 22px 42px rgba(2, 6, 23, 0.48),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(10px);
+}
+
+.auth-form-shell::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(120deg, rgba(16, 185, 129, 0.06), transparent 45%);
+}
+
+.auth-input {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.auth-input:focus {
+  background: rgba(30, 41, 59, 0.92);
+}
+
+.auth-cta {
+  background: linear-gradient(90deg, #10b981, #14b8a6);
+}
+
+@keyframes brandGlow {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+@keyframes brandFloat {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-4px); }
+}
+
+@keyframes authImageFloat {
+  0%, 100% { transform: scale(1.01) translateY(0); }
+  50% { transform: scale(1.02) translateY(-3px); }
 }
