@@ -1025,7 +1025,8 @@ const RetrieveView = ({ token }) => {
           return;
         }
         setPayload(null);
-        throw new Error(data.error || "Unable to retrieve link");
+        if (response.status === 403) throw new Error("403 Forbidden: Invalid link.");
+        throw new Error(data.error || `Request failed (${response.status})`);
       }
       setPasswordRequired(false);
       setError("");
@@ -1053,7 +1054,8 @@ const RetrieveView = ({ token }) => {
       const response = await fetch(`${API_BASE_URL}/api/shares/${token}/download`, { headers });
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || "Download failed");
+        if (response.status === 403) throw new Error("403 Forbidden: Invalid link.");
+        throw new Error(data.error || `Download failed (${response.status})`);
       }
       const blob = await response.blob();
       const href = URL.createObjectURL(blob);
@@ -1123,10 +1125,24 @@ const RetrieveView = ({ token }) => {
   );
 };
 
+const ShareForbiddenPage = () => (
+  <div className="vault-page min-h-screen">
+    <div className="vault-orb orb-a" />
+    <div className="vault-orb orb-b" />
+    <div className="mx-auto max-w-3xl px-4 py-10">
+      <div className={`${appPanel} relative z-10`}>
+        <h1 className="text-3xl font-bold text-slate-900">403 Forbidden</h1>
+        <p className="mt-2 text-sm text-slate-700">Invalid share URL.</p>
+      </div>
+    </div>
+  </div>
+);
+
 export default function App() {
   const [auth, setAuth] = useState(authFromStorage);
   const pathname = window.location.pathname;
   const shareMatch = pathname.match(/^\/share\/([a-f0-9]{32})$/i);
+  const isSharePath = pathname.startsWith("/share/");
   const adminUserMatch = pathname.match(/^\/admin\/users\/([^/]+)$/i);
 
   useEffect(() => {
@@ -1158,6 +1174,7 @@ export default function App() {
   };
 
   if (shareMatch) return <RetrieveView token={shareMatch[1]} />;
+  if (isSharePath) return <ShareForbiddenPage />;
   if (!auth.token || !auth.user) return <AuthScreen onAuth={handleAuth} />;
 
   const isAdmin = auth.user.role === "admin";
